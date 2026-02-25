@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+PyJWT
+pwdlib[argon2]
+python-multipart
+sqlalchemy[asyncio]
+asyncpg
+alembic
+pydantic-settings
