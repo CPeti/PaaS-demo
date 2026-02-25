@@ -8,3 +8,4 @@ asyncpg
 alembic
 pydantic-settings
 pydantic[email]
+boto3
