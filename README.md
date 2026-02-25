@@ -43,33 +43,37 @@ A full-stack photo album application demonstrating a Platform-as-a-Service deplo
 ## Getting Started
 
 ### Prerequisites
-- Python ≥ 3.11
-- Node.js ≥ 20
-- Docker
+- Docker (with Compose v2)
 
-### 1 — Start the database
+### Docker — full stack
 
 ```bash
-cd backend
-docker compose up -d
+docker compose up --build
 ```
 
-### 2 — Start the backend
+| Service | URL |
+|---|---|
+| Frontend (nginx) | http://localhost:5173 |
+| Backend (FastAPI) | http://localhost:8000 |
+| API docs | http://localhost:8000/docs |
+
+> The backend URL embedded in the frontend bundle defaults to `http://localhost:8000`.
+> Override it at build time: `docker compose build --build-arg VITE_API_URL=https://api.example.com frontend`
+
+### Local development (without Docker)
+
+**Prerequisites:** Python ≥ 3.11, Node.js ≥ 20, Docker (for the DB only)
 
 ```bash
-cd backend
+# 1 — Database
+cd backend && docker compose up -d
+
+# 2 — Backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload
-# API docs: http://localhost:8000/docs
-```
 
-### 3 — Start the frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-# App: http://localhost:5173
+# 3 — Frontend
+cd frontend && npm install && npm run dev
 ```
 
 ---
