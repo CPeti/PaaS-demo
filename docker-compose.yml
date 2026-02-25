@@ -49,6 +49,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/paas_demo
       MINIO_ENDPOINT: http://minio:9000
+      MINIO_PUBLIC_ENDPOINT: http://localhost:9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
       MINIO_BUCKET: photos
@@ -59,7 +60,6 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-
   frontend:
     build:
       context: ./frontend
