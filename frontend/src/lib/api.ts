@@ -12,6 +12,15 @@ export interface Token {
     token_type: string
 }
 
+export interface PhotoRead {
+    id: string
+    filename: string
+    size: number
+    mime_type: string
+    created_at: string
+    url: string
+}
+
 async function request<T>(
     path: string,
     init: RequestInit,
@@ -29,6 +38,10 @@ async function request<T>(
         )
     }
     return body as T
+}
+
+function authHeaders(token: string) {
+    return { Authorization: `Bearer ${token}` }
 }
 
 /** POST /auth/token — form-encoded OAuth2 login */
@@ -52,4 +65,34 @@ export async function apiRegister(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password }),
     })
+}
+
+/** GET /photos — list current user's photos */
+export async function apiListPhotos(token: string): Promise<PhotoRead[]> {
+    return request<PhotoRead[]>('/photos', {
+        headers: authHeaders(token),
+    })
+}
+
+/** POST /photos — upload an image file */
+export async function apiUploadPhoto(token: string, file: File): Promise<PhotoRead> {
+    const form = new FormData()
+    form.append('file', file)
+    return request<PhotoRead>('/photos', {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: form,
+    })
+}
+
+/** DELETE /photos/{id} */
+export async function apiDeletePhoto(token: string, photoId: string): Promise<void> {
+    const res = await fetch(`${BASE}/photos/${photoId}`, {
+        method: 'DELETE',
+        headers: authHeaders(token),
+    })
+    if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        throw new Error(body?.detail ?? `HTTP ${res.status}`)
+    }
 }
