@@ -1,0 +1,19 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies first (cached unless package.json changes)
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Copy source so the container starts with valid code.
+# Tilt's live_update sync() will overlay changes on top without a full rebuild.
+COPY vite.config.ts tsconfig.json tsconfig.app.json tsconfig.node.json ./
+COPY index.html ./
+COPY src/ ./src/
+COPY public/ ./public/
+
+EXPOSE 5173
+
+# Vite dev server with host binding so it's reachable from outside the container
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

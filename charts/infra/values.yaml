@@ -1,0 +1,16 @@
+postgres:
+  image: postgres:16-alpine
+  user: postgres
+  password: postgres
+  db: paas_demo
+  port: 5432
+  storage: 2Gi
+
+minio:
+  image: minio/minio
+  rootUser: minioadmin
+  rootPassword: minioadmin
+  apiPort: 9000
+  consolePort: 9001
+  storage: 5Gi
+  defaultBucket: photos

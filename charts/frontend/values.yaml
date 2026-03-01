@@ -1,0 +1,30 @@
+replicaCount: 1
+
+image:
+  repository: paas-demo-frontend
+  tag: dev
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 5173
+
+# The URL the browser uses to reach the backend API.
+# In a Tilt / local-k8s setup this is normally forwarded to localhost.
+viteApiUrl: "http://localhost:8000"
+
+resources: {}
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: 5173
+  initialDelaySeconds: 10
+  periodSeconds: 15
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: 5173
+  initialDelaySeconds: 5
+  periodSeconds: 10

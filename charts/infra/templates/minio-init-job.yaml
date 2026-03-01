@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-minio-init
+  labels:
+    app.kubernetes.io/name: minio-init
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    # Re-run this job every time the chart is upgraded (helm hook approach)
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  # Retry a few times in case MinIO isn't ready yet
+  backoffLimit: 6
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        # Wait for MinIO to be reachable before running mc commands
+        - name: wait-for-minio
+          image: busybox
+          command:
+            - sh
+            - -c
+            - |
+              until wget -qO- http://{{ .Release.Name }}-minio:{{ .Values.minio.apiPort }}/minio/health/live; do
+                echo "Waiting for MinIO..."; sleep 3;
+              done
+      containers:
+        - name: create-bucket
+          image: minio/mc
+          command:
+            - sh
+            - -c
+            - |
+              mc alias set local http://{{ .Release.Name }}-minio:{{ .Values.minio.apiPort }} \
+                {{ .Values.minio.rootUser }} {{ .Values.minio.rootPassword }} && \
+              mc mb --ignore-existing local/{{ .Values.minio.defaultBucket }} && \
+              mc anonymous set download local/{{ .Values.minio.defaultBucket }} && \
+              echo "Bucket '{{ .Values.minio.defaultBucket }}' ready."

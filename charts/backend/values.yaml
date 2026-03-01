@@ -1,0 +1,39 @@
+replicaCount: 1
+
+image:
+  repository: paas-demo-backend
+  tag: dev
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8000
+
+env:
+  DATABASE_URL: "postgresql+asyncpg://postgres:postgres@infra-postgres:5432/paas_demo"
+  MINIO_ENDPOINT: "http://infra-minio:9000"
+  MINIO_PUBLIC_ENDPOINT: "http://localhost:9000"
+  MINIO_BUCKET: "photos"
+
+# Sensitive values – override with --set or a secret file; do NOT commit real values
+secret:
+  SECRET_KEY: "changeme-use-a-long-random-string-in-production"
+  ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+  MINIO_ACCESS_KEY: "minioadmin"
+  MINIO_SECRET_KEY: "minioadmin"
+
+resources: {}
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: 8000
+  initialDelaySeconds: 10
+  periodSeconds: 15
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: 8000
+  initialDelaySeconds: 5
+  periodSeconds: 10
