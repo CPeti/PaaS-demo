@@ -9,6 +9,7 @@ import {
 import { getToken, clearToken } from '../lib/auth'
 import { PhotoCard } from '../components/PhotoCard'
 import { PhotoModal } from '../components/PhotoModal'
+import { PhotoTable } from '../components/PhotoTable'
 
 export function GalleryPage() {
     const [, navigate] = useLocation()
@@ -26,6 +27,7 @@ export function GalleryPage() {
     const [dragOver, setDragOver] = useState(false)
     const [deletingId, setDeletingId] = useState<string | null>(null)
     const [selectedPhoto, setSelectedPhoto] = useState<PhotoRead | null>(null)
+    const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const selectedIndex = selectedPhoto ? photos.findIndex(p => p.id === selectedPhoto.id) : -1
@@ -199,6 +201,28 @@ export function GalleryPage() {
                                     {photos.length} {photos.length === 1 ? 'photo' : 'photos'}
                                 </span>
                             </h1>
+                            <div class="flex items-center gap-1 rounded-lg bg-slate-900/80 p-1 shadow-sm border border-slate-800">
+                                <button
+                                    onClick={() => setViewMode('grid')}
+                                    class={`flex h-8 w-8 items-center justify-center rounded-md transition-all ${viewMode === 'grid'
+                                            ? 'bg-slate-700 text-white shadow'
+                                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                                        }`}
+                                    title="Grid view"
+                                >
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('table')}
+                                    class={`flex h-8 w-8 items-center justify-center rounded-md transition-all ${viewMode === 'table'
+                                            ? 'bg-slate-700 text-white shadow'
+                                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                                        }`}
+                                    title="Table view"
+                                >
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                                </button>
+                            </div>
                         </div>
 
                         {/* Drag-to-upload overlay on grid */}
@@ -217,17 +241,26 @@ export function GalleryPage() {
                                     <p class="text-lg font-semibold text-white">Drop to upload</p>
                                 </div>
                             )}
-                            <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                                {photos.map(photo => (
-                                    <PhotoCard
-                                        key={photo.id}
-                                        photo={photo}
-                                        deleting={deletingId === photo.id}
-                                        onDelete={() => handleDelete(photo)}
-                                        onOpen={() => setSelectedPhoto(photo)}
-                                    />
-                                ))}
-                            </div>
+                            {viewMode === 'grid' ? (
+                                <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                                    {photos.map(photo => (
+                                        <PhotoCard
+                                            key={photo.id}
+                                            photo={photo}
+                                            deleting={deletingId === photo.id}
+                                            onDelete={() => handleDelete(photo)}
+                                            onOpen={() => setSelectedPhoto(photo)}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <PhotoTable
+                                    photos={photos}
+                                    deletingId={deletingId}
+                                    onDelete={handleDelete}
+                                    onOpen={setSelectedPhoto}
+                                />
+                            )}
                         </div>
                     </>
                 )}
