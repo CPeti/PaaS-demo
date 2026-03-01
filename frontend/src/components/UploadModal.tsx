@@ -125,7 +125,7 @@ export function UploadModal({
                         <input
                             ref={fileInputRef}
                             type="file"
-                            accept="image/*"
+                            accept="image/*,video/*"
                             multiple
                             class="hidden"
                             onChange={(e) => handleFiles((e.target as HTMLInputElement).files)}
@@ -149,11 +149,20 @@ export function UploadModal({
                             {items.map((item) => (
                                 <div key={item.id} class="flex items-center gap-4 rounded-xl border border-slate-700/50 bg-slate-800/40 p-3 transition-colors hover:bg-slate-800/60">
                                     {/* Preview */}
-                                    <img
-                                        src={item.previewUrl}
-                                        alt="preview"
-                                        class="h-16 w-16 shrink-0 rounded-lg object-cover bg-slate-900 border border-slate-700"
-                                    />
+                                    {item.file.type.startsWith('video/') ? (
+                                        <video
+                                            src={item.previewUrl}
+                                            class="h-16 w-16 shrink-0 rounded-lg object-cover bg-slate-900 border border-slate-700 pointer-events-none"
+                                            muted
+                                            playsInline
+                                        />
+                                    ) : (
+                                        <img
+                                            src={item.previewUrl}
+                                            alt="preview"
+                                            class="h-16 w-16 shrink-0 rounded-lg object-cover bg-slate-900 border border-slate-700 pointer-events-none"
+                                        />
+                                    )}
 
                                     {/* Edit Name & Size */}
                                     <div class="flex min-w-0 flex-1 flex-col justify-center">

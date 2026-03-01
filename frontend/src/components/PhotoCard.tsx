@@ -22,18 +22,36 @@ export function PhotoCard({
             onMouseLeave={() => setHovered(false)}
             onClick={onOpen}
         >
-            <img
-                src={photo.thumbnail_url || photo.url}
-                alt={photo.filename}
-                class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                loading="lazy"
-                onError={(e) => {
-                    const target = e.currentTarget as HTMLImageElement;
-                    if (target.src !== photo.url) {
-                        target.src = photo.url;
-                    }
-                }}
-            />
+            {photo.mime_type.startsWith('video/') ? (
+                <video
+                    src={photo.url}
+                    poster={photo.thumbnail_url}
+                    preload="none"
+                    class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 pointer-events-none"
+                    muted
+                    loop
+                    playsInline
+                    onMouseEnter={(e) => (e.target as HTMLVideoElement).play().catch(() => { })}
+                    onMouseLeave={(e) => {
+                        const target = e.target as HTMLVideoElement;
+                        target.pause();
+                        target.currentTime = 0;
+                    }}
+                />
+            ) : (
+                <img
+                    src={photo.thumbnail_url || photo.url}
+                    alt={photo.filename}
+                    class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 pointer-events-none"
+                    loading="lazy"
+                    onError={(e) => {
+                        const target = e.currentTarget as HTMLImageElement;
+                        if (target.src !== photo.url) {
+                            target.src = photo.url;
+                        }
+                    }}
+                />
+            )}
 
             {/* Hover overlay */}
             <div class={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-opacity duration-200 ${hovered ? 'opacity-100' : 'opacity-0'}`}>

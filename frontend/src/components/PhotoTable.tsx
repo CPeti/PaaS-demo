@@ -102,18 +102,29 @@ export function PhotoTable({
                                 >
                                     <td class="px-6 py-3">
                                         <div class="h-10 w-10 overflow-hidden rounded-lg bg-slate-800">
-                                            <img
-                                                src={photo.thumbnail_url || photo.url}
-                                                alt={photo.filename}
-                                                class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-                                                loading="lazy"
-                                                onError={(e) => {
-                                                    const target = e.currentTarget as HTMLImageElement;
-                                                    if (target.src !== photo.url) {
-                                                        target.src = photo.url;
-                                                    }
-                                                }}
-                                            />
+                                            {photo.mime_type.startsWith('video/') ? (
+                                                <video
+                                                    src={photo.url}
+                                                    poster={photo.thumbnail_url}
+                                                    preload="none"
+                                                    class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110 pointer-events-none"
+                                                    muted
+                                                    playsInline
+                                                />
+                                            ) : (
+                                                <img
+                                                    src={photo.thumbnail_url || photo.url}
+                                                    alt={photo.filename}
+                                                    class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110 pointer-events-none"
+                                                    loading="lazy"
+                                                    onError={(e) => {
+                                                        const target = e.currentTarget as HTMLImageElement;
+                                                        if (target.src !== photo.url) {
+                                                            target.src = photo.url;
+                                                        }
+                                                    }}
+                                                />
+                                            )}
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">

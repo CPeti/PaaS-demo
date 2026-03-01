@@ -1,5 +1,7 @@
 import io
 import uuid
+import cv2
+import tempfile
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -15,7 +17,7 @@ from app.schemas.photo import PhotoRead
 
 router = APIRouter(prefix="/photos", tags=["photos"])
 
-MAX_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_SIZE = 1000 * 1024 * 1024  # 1000 MB
 
 
 def _to_read(photo, url: str, thumbnail_url: str) -> PhotoRead:
@@ -37,10 +39,12 @@ async def upload_photo(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> PhotoRead:
     # Validate content type
-    if not file.content_type or not file.content_type.startswith("image/"):
+    if not file.content_type or not (
+        file.content_type.startswith("image/") or file.content_type.startswith("video/")
+    ):
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Only image files are accepted",
+            detail="Only image and video files are accepted",
         )
 
     # Read and validate size
@@ -48,31 +52,59 @@ async def upload_photo(
     if len(file_bytes) > MAX_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="File exceeds 10 MB limit",
+            detail="File exceeds limit",
         )
 
     # Generate thumbnail
-    try:
-        image = Image.open(io.BytesIO(file_bytes))
-        image.thumbnail((400, 400))
-        thumb_io = io.BytesIO()
-        if image.mode in ("RGBA", "P"):
-            image = image.convert("RGB")
-        image.save(thumb_io, format="JPEG", quality=85)
-        thumb_bytes = thumb_io.getvalue()
-        thumb_content_type = "image/jpeg"
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid image file: {exc}",
-        )
+    thumb_bytes = None
+    thumb_content_type = None
+    if file.content_type.startswith("image/"):
+        try:
+            image = Image.open(io.BytesIO(file_bytes))
+            image.thumbnail((400, 400))
+            thumb_io = io.BytesIO()
+            if image.mode in ("RGBA", "P"):
+                image = image.convert("RGB")
+            image.save(thumb_io, format="JPEG", quality=85)
+            thumb_bytes = thumb_io.getvalue()
+            thumb_content_type = "image/jpeg"
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid image file: {exc}",
+            )
+    elif file.content_type.startswith("video/"):
+        try:
+            with tempfile.NamedTemporaryFile(delete=True, suffix=".mp4") as temp_video:
+                temp_video.write(file_bytes)
+                temp_video.flush()
+                
+                cap = cv2.VideoCapture(temp_video.name)
+                ret, frame = cap.read()
+                cap.release()
+                
+                if ret:
+                    # Convert BGR to RGB
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    image = Image.fromarray(frame_rgb)
+                    image.thumbnail((400, 400))
+                    
+                    thumb_io = io.BytesIO()
+                    image.save(thumb_io, format="JPEG", quality=85)
+                    thumb_bytes = thumb_io.getvalue()
+                    thumb_content_type = "image/jpeg"
+        except Exception as exc:
+            print(f"Failed to generate video thumbnail: {exc}")
+            # We don't fail the upload if thumbnail generation fails for a video
+            pass
 
     # Upload to MinIO
     key = storage.build_key(current_user.id, file.filename or "upload")
     thumb_key = key + ".thumb"
     try:
         storage.upload_file(file_bytes, key, file.content_type)
-        storage.upload_file(thumb_bytes, thumb_key, thumb_content_type)
+        if thumb_bytes and thumb_content_type:
+            storage.upload_file(thumb_bytes, thumb_key, thumb_content_type)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

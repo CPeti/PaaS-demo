@@ -53,11 +53,22 @@ export function PhotoModal({
                 class="relative mx-20 flex max-h-[90vh] max-w-[90vw] flex-col items-center"
                 onClick={(e) => e.stopPropagation()}
             >
-                <img
-                    src={photo.url}
-                    alt={photo.filename}
-                    class="max-h-[80vh] max-w-full rounded-2xl object-contain shadow-2xl"
-                />
+                {photo.mime_type.startsWith('video/') ? (
+                    <video
+                        src={photo.url}
+                        class="max-h-[80vh] max-w-full rounded-2xl shadow-2xl bg-black/50"
+                        controls
+                        autoPlay
+                        loop
+                        playsInline
+                    />
+                ) : (
+                    <img
+                        src={photo.url}
+                        alt={photo.filename}
+                        class="max-h-[80vh] max-w-full rounded-2xl object-contain shadow-2xl"
+                    />
+                )}
 
                 {/* Info bar */}
                 <div class="mt-4 flex w-full items-center justify-between gap-4">

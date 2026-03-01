@@ -11,3 +11,4 @@ pydantic-settings
 pydantic[email]
 boto3
 Pillow
+opencv-python-headless
