@@ -1,4 +1,5 @@
 const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+import { clearToken } from './auth'
 
 export interface UserRead {
     id: string
@@ -29,6 +30,14 @@ async function request<T>(
     const res = await fetch(`${BASE}${path}`, init)
     const body = await res.json().catch(() => null)
     if (!res.ok) {
+        if (res.status === 401) {
+            clearToken()
+            window.location.href = '/login'
+            // The redirect will stop further execution in most cases,
+            // but to ensure the function doesn't proceed, we can throw or return.
+            // Throwing an error here ensures the promise rejects if the redirect doesn't happen immediately.
+            throw new Error('Unauthorized: Redirecting to login.')
+        }
         const detail = body?.detail
         throw new Error(
             typeof detail === 'string'
@@ -97,6 +106,10 @@ export async function apiDeletePhoto(token: string, photoId: string): Promise<vo
         headers: authHeaders(token),
     })
     if (!res.ok) {
+        if (res.status === 401) {
+            clearToken()
+            window.location.href = '/login'
+        }
         const body = await res.json().catch(() => null)
         throw new Error(body?.detail ?? `HTTP ${res.status}`)
     }
