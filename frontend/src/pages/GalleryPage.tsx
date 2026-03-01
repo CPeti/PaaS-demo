@@ -3,6 +3,7 @@ import { useLocation } from 'wouter'
 import {
     type PhotoRead,
     apiListPhotos,
+    apiUpdatePhoto,
     apiUploadPhoto,
     apiDeletePhoto,
 } from '../lib/api'
@@ -73,6 +74,17 @@ export function GalleryPage() {
             setError(e instanceof Error ? e.message : 'Delete failed')
         } finally {
             setDeletingId(null)
+        }
+    }
+
+    async function handleRename(photo: PhotoRead, newName: string) {
+        if (!token) return
+        try {
+            const updatedPhoto = await apiUpdatePhoto(token, photo.id, { filename: newName })
+            setPhotos(prev => prev.map(p => p.id === photo.id ? updatedPhoto : p))
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Rename failed')
+            throw e // Re-throw so table cell can catch it
         }
     }
 
@@ -214,6 +226,7 @@ export function GalleryPage() {
                                     deletingId={deletingId}
                                     onDelete={handleDelete}
                                     onOpen={setSelectedPhoto}
+                                    onRename={handleRename}
                                 />
                             )}
                         </div>

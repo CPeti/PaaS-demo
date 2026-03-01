@@ -14,3 +14,6 @@ class PhotoRead(BaseModel):
     thumbnail_url: str
 
     model_config = {"from_attributes": True}
+
+class PhotoUpdate(BaseModel):
+    filename: str | None = None

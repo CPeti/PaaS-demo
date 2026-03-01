@@ -1,65 +1,91 @@
-import { useState } from 'preact/hooks'
-import type { PhotoRead } from '../lib/api'
-import { formatSize } from '../lib/format'
+import { useState, useRef, useEffect } from 'preact/hooks'
+import { type PhotoRead } from '../lib/api'
+import { formatSize, formatDate } from '../lib/format'
 
 export function PhotoTable({
     photos,
     deletingId,
     onDelete,
     onOpen,
+    onRename,
 }: {
     photos: PhotoRead[]
     deletingId: string | null
     onDelete: (photo: PhotoRead) => void
     onOpen: (photo: PhotoRead) => void
+    onRename?: (photo: PhotoRead, newName: string) => Promise<void>
 }) {
-    const [sortColumn, setSortColumn] = useState<'filename' | 'size' | 'created_at'>('created_at')
-    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+    type SortColumn = 'filename' | 'size' | 'created_at'
+    const [sortCol, setSortCol] = useState<SortColumn>('created_at')
+    const [sortDesc, setSortDesc] = useState(true)
 
-    function toggleSort(col: 'filename' | 'size' | 'created_at') {
-        if (sortColumn === col) {
-            setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
+    // Inline editing state
+    const [editingId, setEditingId] = useState<string | null>(null)
+    const [editName, setEditName] = useState('')
+    const [savingId, setSavingId] = useState<string | null>(null)
+    const inputRef = useRef<HTMLInputElement>(null)
+
+    // Focus input when editing starts
+    useEffect(() => {
+        if (editingId && inputRef.current) {
+            inputRef.current.focus()
+            // Select text but not the extension
+            const lastDot = editName.lastIndexOf('.')
+            if (lastDot > 0) {
+                inputRef.current.setSelectionRange(0, lastDot)
+            } else {
+                inputRef.current.select()
+            }
+        }
+    }, [editingId, editName])
+
+    async function handleSaveRename(photo: PhotoRead) {
+        if (!onRename || editName.trim() === '' || editName === photo.filename) {
+            setEditingId(null)
+            return
+        }
+
+        setSavingId(photo.id)
+        try {
+            await onRename(photo, editName.trim())
+            setEditingId(null)
+        } catch (e) {
+            // Error is handled by parent, we just stay in edit mode
+            inputRef.current?.focus()
+        } finally {
+            setSavingId(null)
+        }
+    }
+
+    function toggleSort(col: SortColumn) {
+        if (sortCol === col) {
+            setSortDesc(!sortDesc)
         } else {
-            setSortColumn(col)
-            setSortDir(col === 'created_at' ? 'desc' : 'asc') // default to desc for date, asc for others
+            setSortCol(col)
+            setSortDesc(col === 'created_at') // default to desc for date, asc for others
         }
     }
 
     const sortedPhotos = [...photos].sort((a, b) => {
         let cmp = 0
-        if (sortColumn === 'filename') {
+        if (sortCol === 'filename') {
             cmp = a.filename.localeCompare(b.filename)
-        } else if (sortColumn === 'size') {
+        } else if (sortCol === 'size') {
             cmp = a.size - b.size
-        } else if (sortColumn === 'created_at') {
+        } else if (sortCol === 'created_at') {
             cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         }
-        return sortDir === 'asc' ? cmp : -cmp
+        return sortDesc ? -cmp : cmp
     })
 
-    function formatDate(isoStr: string) {
-        const d = new Date(isoStr)
-        const yyyy = d.getFullYear()
-        const mm = String(d.getMonth() + 1).padStart(2, '0')
-        const dd = String(d.getDate()).padStart(2, '0')
-        const hh = String(d.getHours()).padStart(2, '0')
-        const _mm = String(d.getMinutes()).padStart(2, '0')
-        return `${yyyy}-${mm}-${dd} ${hh}:${_mm}`
-    }
-
-    function truncateFilename(name: string) {
-        if (name.length <= 40) return name
-        return name.slice(0, 37) + '...'
-    }
-
-    function SortIcon({ col }: { col: 'filename' | 'size' | 'created_at' }) {
-        if (sortColumn !== col) {
+    function SortIcon({ col }: { col: SortColumn }) {
+        if (sortCol !== col) {
             return <svg class="h-4 w-4 text-slate-500 opacity-0 group-hover:opacity-50 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>
         }
-        return sortDir === 'asc' ? (
-            <svg class="h-4 w-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
-        ) : (
+        return sortDesc ? (
             <svg class="h-4 w-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+        ) : (
+            <svg class="h-4 w-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
         )
     }
 
@@ -128,9 +154,67 @@ export function PhotoTable({
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="font-medium text-white group-hover:text-violet-300 transition-colors">
-                                            {truncateFilename(photo.filename)}
-                                        </div>
+                                        {editingId === photo.id ? (
+                                            <div class="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                                                <input
+                                                    ref={inputRef}
+                                                    type="text"
+                                                    value={editName}
+                                                    onInput={(e) => setEditName((e.target as HTMLInputElement).value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') handleSaveRename(photo)
+                                                        if (e.key === 'Escape') setEditingId(null)
+                                                    }}
+                                                    disabled={savingId === photo.id}
+                                                    class="w-48 bg-slate-800 text-sm font-medium text-white border border-violet-500 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-violet-500 transition-colors disabled:opacity-50"
+                                                />
+                                                {savingId === photo.id ? (
+                                                    <span class="h-4 w-4 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-400 shrink-0" />
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleSaveRename(photo) }}
+                                                            class="text-green-400 hover:text-green-300 transition-colors p-1"
+                                                            title="Save"
+                                                        >
+                                                            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                                            </svg>
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setEditingId(null) }}
+                                                            class="text-slate-400 hover:text-red-400 transition-colors p-1"
+                                                            title="Cancel"
+                                                        >
+                                                            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                                            </svg>
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div class="flex items-center gap-2 group/edit">
+                                                <p class="text-sm font-medium text-white max-w-[200px] truncate" title={photo.filename}>
+                                                    {photo.filename.length > 40 ? photo.filename.substring(0, 37) + '...' : photo.filename}
+                                                </p>
+                                                {onRename && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            setEditName(photo.filename)
+                                                            setEditingId(photo.id)
+                                                        }}
+                                                        class="opacity-0 group-hover/edit:opacity-100 text-slate-400 hover:text-violet-400 transition-all p-1 -ml-1"
+                                                        title="Rename file"
+                                                    >
+                                                        <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                                        </svg>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap font-mono text-xs text-slate-400">
                                         {formatSize(photo.size)}

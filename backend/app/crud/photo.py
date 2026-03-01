@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.photo_orm import Photo
@@ -56,3 +56,16 @@ async def delete_photo(
     )
     await db.commit()
     return result.scalar_one_or_none() is not None
+
+
+async def update_photo(
+    db: AsyncSession, photo_id: uuid.UUID, user_id: uuid.UUID, filename: str
+) -> Photo | None:
+    result = await db.execute(
+        update(Photo)
+        .where(Photo.id == photo_id, Photo.user_id == user_id)
+        .values(filename=filename)
+        .returning(Photo)
+    )
+    await db.commit()
+    return result.scalar_one_or_none()

@@ -101,3 +101,15 @@ export async function apiDeletePhoto(token: string, photoId: string): Promise<vo
         throw new Error(body?.detail ?? `HTTP ${res.status}`)
     }
 }
+
+/** PATCH /photos/{id} — update photo metadata */
+export async function apiUpdatePhoto(token: string, photoId: string, updates: { filename?: string }): Promise<PhotoRead> {
+    return request<PhotoRead>(`/photos/${photoId}`, {
+        method: 'PATCH',
+        headers: {
+            ...authHeaders(token),
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+    })
+}

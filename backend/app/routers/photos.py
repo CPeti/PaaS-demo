@@ -13,7 +13,7 @@ from app.crud import photo as photo_crud
 from app.db.session import get_db
 from app.dependencies import get_current_user
 from app.models.user_orm import User
-from app.schemas.photo import PhotoRead
+from app.schemas.photo import PhotoRead, PhotoUpdate
 
 router = APIRouter(prefix="/photos", tags=["photos"])
 
@@ -140,6 +140,38 @@ async def list_photos(
         )
         for p in photos
     ]
+
+
+@router.patch("/{photo_id}", response_model=PhotoRead)
+async def update_photo(
+    photo_id: uuid.UUID,
+    photo_update: PhotoUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> PhotoRead:
+    if photo_update.filename is not None:
+        photo = await photo_crud.update_photo(
+            db, photo_id, current_user.id, photo_update.filename
+        )
+        if not photo:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Photo not found"
+            )
+        
+        # We must return the full PhotoRead model which requires presigned URLs.
+        url = storage.get_presigned_url(photo.key)
+        thumb_url = storage.get_presigned_url(photo.key + ".thumb")
+        return _to_read(photo, url, thumb_url)
+    
+    # If nothing was updated, just fetch and return current
+    photo = await photo_crud.get_photo(db, photo_id, current_user.id)
+    if not photo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Photo not found"
+        )
+    url = storage.get_presigned_url(photo.key)
+    thumb_url = storage.get_presigned_url(photo.key + ".thumb")
+    return _to_read(photo, url, thumb_url)
 
 
 @router.delete("/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
