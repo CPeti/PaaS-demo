@@ -19,6 +19,7 @@ export interface PhotoRead {
     mime_type: string
     created_at: string
     url: string
+    thumbnail_url: string
 }
 
 async function request<T>(

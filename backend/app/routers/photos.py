@@ -1,7 +1,9 @@
+import io
 import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import storage
@@ -16,7 +18,7 @@ router = APIRouter(prefix="/photos", tags=["photos"])
 MAX_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
-def _to_read(photo, url: str) -> PhotoRead:
+def _to_read(photo, url: str, thumbnail_url: str) -> PhotoRead:
     return PhotoRead(
         id=photo.id,
         filename=photo.filename,
@@ -24,6 +26,7 @@ def _to_read(photo, url: str) -> PhotoRead:
         mime_type=photo.mime_type,
         created_at=photo.created_at,
         url=url,
+        thumbnail_url=thumbnail_url,
     )
 
 
@@ -48,10 +51,28 @@ async def upload_photo(
             detail="File exceeds 10 MB limit",
         )
 
+    # Generate thumbnail
+    try:
+        image = Image.open(io.BytesIO(file_bytes))
+        image.thumbnail((400, 400))
+        thumb_io = io.BytesIO()
+        if image.mode in ("RGBA", "P"):
+            image = image.convert("RGB")
+        image.save(thumb_io, format="JPEG", quality=85)
+        thumb_bytes = thumb_io.getvalue()
+        thumb_content_type = "image/jpeg"
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid image file: {exc}",
+        )
+
     # Upload to MinIO
     key = storage.build_key(current_user.id, file.filename or "upload")
+    thumb_key = key + ".thumb"
     try:
         storage.upload_file(file_bytes, key, file.content_type)
+        storage.upload_file(thumb_bytes, thumb_key, thumb_content_type)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -69,7 +90,8 @@ async def upload_photo(
     )
 
     url = storage.get_presigned_url(photo.key)
-    return _to_read(photo, url)
+    thumb_url = storage.get_presigned_url(thumb_key)
+    return _to_read(photo, url, thumb_url)
 
 
 @router.get("", response_model=list[PhotoRead])
@@ -78,7 +100,14 @@ async def list_photos(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[PhotoRead]:
     photos = await photo_crud.list_photos(db, current_user.id)
-    return [_to_read(p, storage.get_presigned_url(p.key)) for p in photos]
+    return [
+        _to_read(
+            p,
+            storage.get_presigned_url(p.key),
+            storage.get_presigned_url(p.key + ".thumb")
+        )
+        for p in photos
+    ]
 
 
 @router.delete("/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -97,6 +126,7 @@ async def delete_photo(
     # Delete from object store first, then DB
     try:
         storage.delete_file(photo.key)
+        storage.delete_file(photo.key + ".thumb")
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

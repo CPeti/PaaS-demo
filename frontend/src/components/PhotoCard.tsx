@@ -23,10 +23,16 @@ export function PhotoCard({
             onClick={onOpen}
         >
             <img
-                src={photo.url}
+                src={photo.thumbnail_url || photo.url}
                 alt={photo.filename}
                 class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                 loading="lazy"
+                onError={(e) => {
+                    const target = e.currentTarget as HTMLImageElement;
+                    if (target.src !== photo.url) {
+                        target.src = photo.url;
+                    }
+                }}
             />
 
             {/* Hover overlay */}

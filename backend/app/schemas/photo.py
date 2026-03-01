@@ -11,5 +11,6 @@ class PhotoRead(BaseModel):
     mime_type: str
     created_at: datetime
     url: str  # presigned URL injected at response time
+    thumbnail_url: str
 
     model_config = {"from_attributes": True}

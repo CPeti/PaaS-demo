@@ -10,3 +10,4 @@ alembic
 pydantic-settings
 pydantic[email]
 boto3
+Pillow
