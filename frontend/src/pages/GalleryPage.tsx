@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import { useLocation } from 'wouter'
 import {
     type PhotoRead,
@@ -10,6 +10,7 @@ import { getToken, clearToken } from '../lib/auth'
 import { PhotoCard } from '../components/PhotoCard'
 import { PhotoModal } from '../components/PhotoModal'
 import { PhotoTable } from '../components/PhotoTable'
+import { UploadModal, type UploadItem } from '../components/UploadModal'
 
 export function GalleryPage() {
     const [, navigate] = useLocation()
@@ -23,12 +24,10 @@ export function GalleryPage() {
     const [photos, setPhotos] = useState<PhotoRead[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [uploading, setUploading] = useState(false)
-    const [dragOver, setDragOver] = useState(false)
+    const [uploadModalOpen, setUploadModalOpen] = useState(false)
     const [deletingId, setDeletingId] = useState<string | null>(null)
     const [selectedPhoto, setSelectedPhoto] = useState<PhotoRead | null>(null)
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
-    const fileInputRef = useRef<HTMLInputElement>(null)
 
     const selectedIndex = selectedPhoto ? photos.findIndex(p => p.id === selectedPhoto.id) : -1
     const showPrev = selectedIndex > 0
@@ -48,19 +47,17 @@ export function GalleryPage() {
 
     useEffect(() => { fetchPhotos() }, [])
 
-    async function handleFiles(files: FileList | null) {
-        if (!files || !token) return
-        setUploading(true)
-        setError(null)
+    async function handleUploadConfirm(items: UploadItem[]) {
+        if (!token) return
         try {
-            for (const file of Array.from(files)) {
-                const photo = await apiUploadPhoto(token, file)
+            // Process sequentially or Promise.all. Doing sequentially helps catch individual errors cleanly.
+            for (const item of items) {
+                const photo = await apiUploadPhoto(token, item.file, item.customName || item.file.name)
                 setPhotos(prev => [photo, ...prev])
             }
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Upload failed')
-        } finally {
-            setUploading(false)
+            // Re-throw so the modal can display the error
+            throw e
         }
     }
 
@@ -103,23 +100,13 @@ export function GalleryPage() {
                     <div class="flex items-center gap-3">
                         <button
                             id="upload-btn"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={uploading}
-                            class="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50 transition-colors"
+                            onClick={() => setUploadModalOpen(true)}
+                            class="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 transition-colors"
                         >
-                            {uploading ? (
-                                <>
-                                    <span class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                                    Uploading…
-                                </>
-                            ) : (
-                                <>
-                                    <svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M8 2v9M4 5l4-4 4 4" /><path d="M2 12v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-1" />
-                                    </svg>
-                                    Upload
-                                </>
-                            )}
+                            <svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M8 2v9M4 5l4-4 4 4" /><path d="M2 12v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-1" />
+                            </svg>
+                            Upload
                         </button>
                         <button
                             id="logout-btn"
@@ -132,15 +119,7 @@ export function GalleryPage() {
                 </div>
             </header>
 
-            {/* Hidden file input */}
-            <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                class="hidden"
-                onChange={(e) => handleFiles((e.target as HTMLInputElement).files)}
-            />
+            {/* Hidden file input completely removed in favor of UploadModal */}
 
             <main class="mx-auto max-w-7xl px-6 py-10">
                 {/* Error banner */}
@@ -154,22 +133,12 @@ export function GalleryPage() {
                     </div>
                 )}
 
-                {/* Drop zone (shown when gallery is empty or while dragging) */}
+                {/* Empty State Action */}
                 {(photos.length === 0 && !loading) && (
                     <div
-                        id="drop-zone"
-                        class={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-24 text-center transition-colors ${dragOver
-                            ? 'border-violet-500 bg-violet-500/10'
-                            : 'border-slate-700 hover:border-slate-500'
-                            }`}
-                        onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-                        onDragLeave={() => setDragOver(false)}
-                        onDrop={(e) => {
-                            e.preventDefault()
-                            setDragOver(false)
-                            handleFiles(e.dataTransfer?.files ?? null)
-                        }}
-                        onClick={() => fileInputRef.current?.click()}
+                        id="empty-state"
+                        class="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-700 hover:border-violet-500 hover:bg-violet-500/5 py-24 text-center transition-colors cursor-pointer"
+                        onClick={() => setUploadModalOpen(true)}
                     >
                         <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-800">
                             <svg class="h-7 w-7 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -177,8 +146,8 @@ export function GalleryPage() {
                                 <polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
                             </svg>
                         </div>
-                        <p class="font-medium text-white">Drop photos here</p>
-                        <p class="mt-1 text-sm text-slate-500">or click to browse — up to 10 MB each</p>
+                        <p class="font-medium text-white">Your album is empty</p>
+                        <p class="mt-1 text-sm text-slate-500">Click to upload photos — up to 10 MB each</p>
                     </div>
                 )}
 
@@ -205,8 +174,8 @@ export function GalleryPage() {
                                 <button
                                     onClick={() => setViewMode('grid')}
                                     class={`flex h-8 w-8 items-center justify-center rounded-md transition-all ${viewMode === 'grid'
-                                            ? 'bg-slate-700 text-white shadow'
-                                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                                        ? 'bg-slate-700 text-white shadow'
+                                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
                                         }`}
                                     title="Grid view"
                                 >
@@ -215,8 +184,8 @@ export function GalleryPage() {
                                 <button
                                     onClick={() => setViewMode('table')}
                                     class={`flex h-8 w-8 items-center justify-center rounded-md transition-all ${viewMode === 'table'
-                                            ? 'bg-slate-700 text-white shadow'
-                                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                                        ? 'bg-slate-700 text-white shadow'
+                                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
                                         }`}
                                     title="Table view"
                                 >
@@ -225,22 +194,8 @@ export function GalleryPage() {
                             </div>
                         </div>
 
-                        {/* Drag-to-upload overlay on grid */}
-                        <div
-                            class={`relative rounded-2xl transition-colors ${dragOver ? 'ring-2 ring-violet-500' : ''}`}
-                            onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-                            onDragLeave={() => setDragOver(false)}
-                            onDrop={(e) => {
-                                e.preventDefault()
-                                setDragOver(false)
-                                handleFiles(e.dataTransfer?.files ?? null)
-                            }}
-                        >
-                            {dragOver && (
-                                <div class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-violet-900/60 backdrop-blur-sm">
-                                    <p class="text-lg font-semibold text-white">Drop to upload</p>
-                                </div>
-                            )}
+                        {/* Gallery body wrapper without native drag-drop override */}
+                        <div class="relative rounded-2xl">
                             {viewMode === 'grid' ? (
                                 <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                                     {photos.map(photo => (
@@ -265,6 +220,13 @@ export function GalleryPage() {
                     </>
                 )}
             </main>
+
+            {/* Modals */}
+            <UploadModal
+                isOpen={uploadModalOpen}
+                onClose={() => setUploadModalOpen(false)}
+                onUpload={handleUploadConfirm}
+            />
 
             {selectedPhoto && (
                 <PhotoModal

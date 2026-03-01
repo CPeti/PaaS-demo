@@ -76,9 +76,13 @@ export async function apiListPhotos(token: string): Promise<PhotoRead[]> {
 }
 
 /** POST /photos — upload an image file */
-export async function apiUploadPhoto(token: string, file: File): Promise<PhotoRead> {
+export async function apiUploadPhoto(token: string, file: File, filename?: string): Promise<PhotoRead> {
     const form = new FormData()
-    form.append('file', file)
+    if (filename) {
+        form.append('file', file, filename)
+    } else {
+        form.append('file', file)
+    }
     return request<PhotoRead>('/photos', {
         method: 'POST',
         headers: authHeaders(token),
