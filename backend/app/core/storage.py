@@ -19,12 +19,12 @@ def _make_client(endpoint_url: str):
 
 
 def _ops_client():
-    """Client for upload/delete — uses internal Docker endpoint."""
+    """Client for upload/delete - uses internal Docker endpoint."""
     return _make_client(settings.MINIO_ENDPOINT)
 
 
 def _presign_client():
-    """Client for presigning — uses public endpoint so browser URLs resolve.
+    """Client for presigning - uses public endpoint so browser URLs resolve.
 
     Presigned URL generation is pure local HMAC math; no network call is made
     to the public endpoint from inside the container.

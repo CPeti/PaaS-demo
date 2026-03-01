@@ -60,7 +60,7 @@ export function LandingPage() {
 
             <p class="mt-6 text-lg text-slate-400 leading-relaxed max-w-xl mx-auto">
               Lumina gives you a private space to upload, organize, and
-              rediscover your photos — simple, fast, and always yours.
+              rediscover your photos - simple, fast, and always yours.
             </p>
 
             <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -69,7 +69,7 @@ export function LandingPage() {
                 id="hero-cta"
                 class="rounded-xl bg-violet-600 px-8 py-3.5 text-sm font-semibold text-white shadow-xl shadow-violet-900/40 hover:bg-violet-500 hover:shadow-violet-800/50 transition-all duration-200"
               >
-                Get started — it's free
+                Get started - it's free
               </a>
               <a
                 href="#features"

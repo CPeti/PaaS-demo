@@ -45,7 +45,7 @@ function authHeaders(token: string) {
     return { Authorization: `Bearer ${token}` }
 }
 
-/** POST /auth/token — form-encoded OAuth2 login */
+/** POST /auth/token - form-encoded OAuth2 login */
 export async function apiLogin(username: string, password: string): Promise<Token> {
     const form = new URLSearchParams({ username, password })
     return request<Token>('/auth/token', {
@@ -55,7 +55,7 @@ export async function apiLogin(username: string, password: string): Promise<Toke
     })
 }
 
-/** POST /auth/register — JSON */
+/** POST /auth/register - JSON */
 export async function apiRegister(
     username: string,
     email: string,
@@ -68,14 +68,14 @@ export async function apiRegister(
     })
 }
 
-/** GET /photos — list current user's photos */
+/** GET /photos - list current user's photos */
 export async function apiListPhotos(token: string): Promise<PhotoRead[]> {
     return request<PhotoRead[]>('/photos', {
         headers: authHeaders(token),
     })
 }
 
-/** POST /photos — upload an image file */
+/** POST /photos - upload an image file */
 export async function apiUploadPhoto(token: string, file: File, filename?: string): Promise<PhotoRead> {
     const form = new FormData()
     if (filename) {
@@ -102,7 +102,7 @@ export async function apiDeletePhoto(token: string, photoId: string): Promise<vo
     }
 }
 
-/** PATCH /photos/{id} — update photo metadata */
+/** PATCH /photos/{id} - update photo metadata */
 export async function apiUpdatePhoto(token: string, photoId: string, updates: { filename?: string }): Promise<PhotoRead> {
     return request<PhotoRead>(`/photos/${photoId}`, {
         method: 'PATCH',

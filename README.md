@@ -1,4 +1,4 @@
-# Lumina — Cloud-Based Photo Album
+# Lumina - Cloud-Based Photo Album
 
 > **PaaS Demo** · Cloud-based Scalable Systems course
 
@@ -33,10 +33,10 @@ A full-stack photo album application demonstrating a Platform-as-a-Service deplo
 
 ## Features
 
-- **User registration & JWT login** — secure password hashing with Argon2
-- **Photo upload, view, delete** — per-user album management
-- **Async backend** — fully non-blocking I/O with SQLAlchemy async + asyncpg
-- **Database migrations** — Alembic for schema versioning
+- **User registration & JWT login** - secure password hashing with Argon2
+- **Photo upload, view, delete** - per-user album management
+- **Async backend** - fully non-blocking I/O with SQLAlchemy async + asyncpg
+- **Database migrations** - Alembic for schema versioning
 
 ---
 
@@ -45,7 +45,7 @@ A full-stack photo album application demonstrating a Platform-as-a-Service deplo
 ### Prerequisites
 - Docker (with Compose v2)
 
-### Docker — full stack
+### Docker - full stack
 
 ```bash
 docker compose up --build
@@ -65,14 +65,14 @@ docker compose up --build
 **Prerequisites:** Python ≥ 3.11, Node.js ≥ 20, Docker (for the DB only)
 
 ```bash
-# 1 — Database
+# 1 - Database
 cd backend && docker compose up -d
 
-# 2 — Backend
+# 2 - Backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 
-# 3 — Frontend
+# 3 - Frontend
 cd frontend && npm install && npm run dev
 ```
 
@@ -82,9 +82,9 @@ cd frontend && npm install && npm run dev
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/` | — | Health check |
-| `POST` | `/auth/register` | — | Create account |
-| `POST` | `/auth/token` | — | Login → JWT |
+| `GET` | `/` | - | Health check |
+| `POST` | `/auth/register` | - | Create account |
+| `POST` | `/auth/token` | - | Login → JWT |
 | `GET` | `/users/me` | Bearer | Current user profile |
 
 ---

@@ -159,7 +159,7 @@ export function GalleryPage() {
                             </svg>
                         </div>
                         <p class="font-medium text-white">Your album is empty</p>
-                        <p class="mt-1 text-sm text-slate-500">Click to upload photos — up to 10 MB each</p>
+                        <p class="mt-1 text-sm text-slate-500">Click to upload photos - up to 10 MB each</p>
                     </div>
                 )}
 
