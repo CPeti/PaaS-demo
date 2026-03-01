@@ -5,6 +5,7 @@ pwdlib[argon2]
 python-multipart
 sqlalchemy[asyncio]
 asyncpg
+psycopg2
 alembic
 pydantic-settings
 pydantic[email]
