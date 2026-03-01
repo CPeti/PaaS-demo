@@ -13,12 +13,16 @@ A full-stack photo album application demonstrating a Platform-as-a-Service deplo
 │  Frontend (Preact) │ ───── > │  Backend (FastAPI)       │
 │  Vite · Tailwind   │  HTTP   │  SQLAlchemy · asyncpg    │
 │  wouter (routing)  │         │  JWT (PyJWT · pwdlib)    │
-└────────────────────┘         └──────────┬───────────────┘
-                                          │
-                                 ┌────────▼──────────┐
-                                 │  PostgreSQL 16    │
-                                 │  (Docker / PaaS)  │
-                                 └───────────────────┘
+│  Canvas thumbnails │         └──────────┬───┬───────────┘
+└─────────┬──────────┘                    │   │
+          │ PUT                 ┌─────────▼──┐│
+          │                     │ PostgreSQL ││
+          └────────────────── > │ (Database) ││
+                                └────────────┘│
+                                      ┌───────▼────┐
+                                      │ MinIO (S3) │
+                                      │ (Storage)  │
+                                      └────────────┘
 ```
 
 | Layer | Technology |
@@ -34,7 +38,8 @@ A full-stack photo album application demonstrating a Platform-as-a-Service deplo
 ## Features
 
 - **User registration & JWT login** - secure password hashing with Argon2
-- **Photo upload, view, delete** - per-user album management
+- **Direct S3 Uploads** - fast, scalable photo and video uploads using presigned URLs
+- **Client-Side Processing** - media thumbnail generation happens in-browser to reduce backend load
 - **Async backend** - fully non-blocking I/O with SQLAlchemy async + asyncpg
 - **Database migrations** - Alembic for schema versioning
 
@@ -51,9 +56,19 @@ A full-stack photo album application demonstrating a Platform-as-a-Service deplo
 docker compose up --build
 ```
 
+### Kubernetes / Tilt
+
+If you have a local Kubernetes cluster (like Docker Desktop, k3d, or minikube) and `tilt` installed, you can run the entire stack with live reloading:
+
+```bash
+tilt up
+```
+
+Press `Space` to open the Tilt dashboard in your browser.
+
 | Service | URL |
 |---|---|
-| Frontend (nginx) | http://localhost:5173 |
+| Frontend | http://localhost:5173 |
 | Backend (FastAPI) | http://localhost:8000 |
 | API docs | http://localhost:8000/docs |
 
@@ -86,6 +101,11 @@ cd frontend && npm install && npm run dev
 | `POST` | `/auth/register` | - | Create account |
 | `POST` | `/auth/token` | - | Login → JWT |
 | `GET` | `/users/me` | Bearer | Current user profile |
+| `GET` | `/photos` | Bearer | List user's photos |
+| `POST` | `/photos/upload-url` | Bearer | Get S3 Presigned PUT URL |
+| `POST` | `/photos/confirm` | Bearer | Confirm direct S3 upload |
+| `PATCH` | `/photos/{id}` | Bearer | Update photo metadata (e.g. rename) |
+| `DELETE` | `/photos/{id}` | Bearer | Delete photo |
 
 ---
 
@@ -105,11 +125,16 @@ PaaS-demo/
 │   ├── alembic/         # DB migrations
 │   ├── docker-compose.yml
 │   └── requirements.txt
-└── frontend/
-    └── src/
-        ├── lib/         # api.ts, auth.ts
-        ├── pages/       # LandingPage, LoginPage, RegisterPage
-        └── app.tsx      # Router
+├── charts/              # Helm charts for Kubernetes
+│   ├── backend/         # FastAPI backend chart
+│   ├── frontend/        # Preact frontend chart
+│   └── infra/           # Infrastructure (Postgres, MinIO) chart
+├── frontend/
+│   └── src/
+│   │   ├── lib/         # api.ts, auth.ts
+│   │   ├── pages/       # LandingPage, LoginPage, RegisterPage
+│   │   └── app.tsx      # Router
+└── Tiltfile             # Tilt configuration for local Kubernetes dev
 ```
 
 ---
