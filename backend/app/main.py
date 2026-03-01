@@ -4,6 +4,7 @@ from collections.abc import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.config import settings
 from app.db.base import Base
 from app.db.session import engine
 from app.routers import auth, users, photos
@@ -23,9 +24,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+_origins = ["http://localhost:5173", "http://localhost"]  # Vite dev / nginx
+if settings.FRONTEND_URL:
+    _origins.append(settings.FRONTEND_URL)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost"],  # Vite dev / nginx
+    allow_origins=_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

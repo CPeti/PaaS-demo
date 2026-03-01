@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
+    FRONTEND_URL: str = ""  # e.g. https://frontend.up.railway.app
+
     # MinIO / S3-compatible object storage
     MINIO_ENDPOINT: str = "http://localhost:9000"       # internal (ops)
     MINIO_PUBLIC_ENDPOINT: str = ""                     # external (presign); defaults to MINIO_ENDPOINT
