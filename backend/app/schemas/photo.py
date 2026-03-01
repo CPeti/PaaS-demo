@@ -17,3 +17,22 @@ class PhotoRead(BaseModel):
 
 class PhotoUpdate(BaseModel):
     filename: str | None = None
+
+
+class UploadRequest(BaseModel):
+    filename: str
+    content_type: str
+    size: int
+
+
+class UploadResponse(BaseModel):
+    key: str
+    url: str
+    thumbnail_url: str
+
+
+class ConfirmRequest(BaseModel):
+    key: str
+    filename: str
+    content_type: str
+    size: int

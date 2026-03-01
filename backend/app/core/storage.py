@@ -63,3 +63,16 @@ def get_presigned_url(key: str, expires: int = 3600) -> str:
         Params={"Bucket": settings.MINIO_BUCKET, "Key": key},
         ExpiresIn=expires,
     )
+
+
+def get_presigned_put_url(key: str, content_type: str, expires: int = 3600) -> str:
+    """Return a pre-signed PUT URL valid for `expires` seconds.
+    
+    Uses the public endpoint so the URL is resolvable by the browser.
+    """
+    return _presign_client().generate_presigned_url(
+        "put_object",
+        Params={"Bucket": settings.MINIO_BUCKET, "Key": key, "ContentType": content_type},
+        ExpiresIn=expires,
+        HttpMethod="PUT",
+    )

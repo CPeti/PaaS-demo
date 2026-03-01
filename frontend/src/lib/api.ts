@@ -33,9 +33,6 @@ async function request<T>(
         if (res.status === 401) {
             clearToken()
             window.location.href = '/login'
-            // The redirect will stop further execution in most cases,
-            // but to ensure the function doesn't proceed, we can throw or return.
-            // Throwing an error here ensures the promise rejects if the redirect doesn't happen immediately.
             throw new Error('Unauthorized: Redirecting to login.')
         }
         const detail = body?.detail
@@ -84,18 +81,64 @@ export async function apiListPhotos(token: string): Promise<PhotoRead[]> {
     })
 }
 
-/** POST /photos - upload an image file */
-export async function apiUploadPhoto(token: string, file: File, filename?: string): Promise<PhotoRead> {
-    const form = new FormData()
-    if (filename) {
-        form.append('file', file, filename)
-    } else {
-        form.append('file', file)
-    }
-    return request<PhotoRead>('/photos', {
+/** 
+ * Direct S3 Upload Flow
+ * 1. Get presigned URLs for the main file and thumbnail
+ * 2. Upload both files directly to S3
+ * 3. Confirm the upload with the backend to save metadata
+ */
+export async function apiUploadPhoto(
+    token: string,
+    file: File,
+    thumbnail: Blob,
+    filename: string
+): Promise<PhotoRead> {
+    // 1. Get Presigned URLs
+    const uploadInfo = await request<{ key: string; url: string; thumbnail_url: string }>('/photos/upload-url', {
         method: 'POST',
-        headers: authHeaders(token),
-        body: form,
+        headers: {
+            ...authHeaders(token),
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            filename,
+            content_type: file.type,
+            size: file.size,
+        }),
+    })
+
+    // 2. Upload to S3 directly (using PUT directly to the pre-signed URLs)
+    // We use standard fetch without auth headers because the URL is already signed.
+    const [fileRes, thumbRes] = await Promise.all([
+        fetch(uploadInfo.url, {
+            method: 'PUT',
+            headers: { 'Content-Type': file.type },
+            body: file,
+        }),
+        fetch(uploadInfo.thumbnail_url, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'image/jpeg' },
+            body: thumbnail,
+        }),
+    ])
+
+    if (!fileRes.ok || !thumbRes.ok) {
+        throw new Error('Failed to upload files directly to storage')
+    }
+
+    // 3. Confirm Upload
+    return request<PhotoRead>('/photos/confirm', {
+        method: 'POST',
+        headers: {
+            ...authHeaders(token),
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            key: uploadInfo.key,
+            filename,
+            content_type: file.type,
+            size: file.size,
+        }),
     })
 }
 

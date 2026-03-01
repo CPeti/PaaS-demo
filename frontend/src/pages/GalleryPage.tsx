@@ -53,7 +53,10 @@ export function GalleryPage() {
         try {
             // Process sequentially or Promise.all. Doing sequentially helps catch individual errors cleanly.
             for (const item of items) {
-                const photo = await apiUploadPhoto(token, item.file, item.customName || item.file.name)
+                if (!item.thumbnail) {
+                    throw new Error(`Failed to generate thumbnail for ${item.file.name}`)
+                }
+                const photo = await apiUploadPhoto(token, item.file, item.thumbnail, item.customName || item.file.name)
                 setPhotos(prev => [photo, ...prev])
             }
         } catch (e) {

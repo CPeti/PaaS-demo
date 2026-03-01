@@ -37,7 +37,8 @@ export function PhotoTable({
                 inputRef.current.select()
             }
         }
-    }, [editingId, editName])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [editingId]) // Only run when editingId changes, not on every keystroke
 
     async function handleSaveRename(photo: PhotoRead) {
         if (!onRename || editName.trim() === '' || editName === photo.filename) {

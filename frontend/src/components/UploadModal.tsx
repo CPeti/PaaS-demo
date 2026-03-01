@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'preact/hooks'
 import { formatSize } from '../lib/format'
+import { generateImageThumbnail, generateVideoThumbnail } from '../lib/thumbnail'
 
 export interface UploadItem {
     id: string
     file: File
     previewUrl: string
     customName: string
+    thumbnail?: Blob
 }
 
 export function UploadModal({
@@ -32,18 +34,36 @@ export function UploadModal({
 
     if (!isOpen) return null
 
-    function handleFiles(files: FileList | null) {
+    async function handleFiles(files: FileList | null) {
         if (!files) return
         setError(null)
 
-        const newItems: UploadItem[] = Array.from(files).map((file) => ({
-            id: Math.random().toString(36).substring(7),
-            file,
-            previewUrl: URL.createObjectURL(file), // Generate local preview
-            customName: file.name, // Default to original name
-        }))
+        // We set loading state while generating thumbnails
+        const newItemsPromise = Array.from(files).map(async (file) => {
+            let thumbnail: Blob | undefined
+            try {
+                if (file.type.startsWith('image/')) {
+                    thumbnail = await generateImageThumbnail(file)
+                } else if (file.type.startsWith('video/')) {
+                    thumbnail = await generateVideoThumbnail(file)
+                }
+            } catch (e) {
+                console.error("Failed to generate thumbnail for", file.name, e)
+                // We'll proceed without a thumbnail if it fails, or maybe we should fail the upload? 
+                // Let's just log it for now. The backend requires a thumbnail actually, so it might fail there.
+            }
 
-        setItems(prev => [...prev, ...newItems])
+            return {
+                id: Math.random().toString(36).substring(7),
+                file,
+                previewUrl: URL.createObjectURL(file), // Generate local preview
+                customName: file.name, // Default to original name
+                thumbnail,
+            } as UploadItem
+        })
+
+        const resolvedItems = await Promise.all(newItemsPromise)
+        setItems(prev => [...prev, ...resolvedItems])
     }
 
     function removeItem(id: string) {

@@ -1,11 +1,7 @@
-import io
 import uuid
-import cv2
-import tempfile
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from PIL import Image
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import storage
@@ -13,7 +9,13 @@ from app.crud import photo as photo_crud
 from app.db.session import get_db
 from app.dependencies import get_current_user
 from app.models.user_orm import User
-from app.schemas.photo import PhotoRead, PhotoUpdate
+from app.schemas.photo import (
+    ConfirmRequest,
+    PhotoRead,
+    PhotoUpdate,
+    UploadRequest,
+    UploadResponse,
+)
 
 router = APIRouter(prefix="/photos", tags=["photos"])
 
@@ -32,97 +34,52 @@ def _to_read(photo, url: str, thumbnail_url: str) -> PhotoRead:
     )
 
 
-@router.post("", response_model=PhotoRead, status_code=status.HTTP_201_CREATED)
-async def upload_photo(
-    file: Annotated[UploadFile, File(description="Image file (max 10 MB)")],
+@router.post("/upload-url", response_model=UploadResponse)
+async def get_upload_url(
+    req: UploadRequest,
     current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-) -> PhotoRead:
-    # Validate content type
-    if not file.content_type or not (
-        file.content_type.startswith("image/") or file.content_type.startswith("video/")
+) -> UploadResponse:
+    if not req.content_type or not (
+        req.content_type.startswith("image/") or req.content_type.startswith("video/")
     ):
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail="Only image and video files are accepted",
         )
 
-    # Read and validate size
-    file_bytes = await file.read()
-    if len(file_bytes) > MAX_SIZE:
+    if req.size > MAX_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail="File exceeds limit",
         )
 
-    # Generate thumbnail
-    thumb_bytes = None
-    thumb_content_type = None
-    if file.content_type.startswith("image/"):
-        try:
-            image = Image.open(io.BytesIO(file_bytes))
-            image.thumbnail((400, 400))
-            thumb_io = io.BytesIO()
-            if image.mode in ("RGBA", "P"):
-                image = image.convert("RGB")
-            image.save(thumb_io, format="JPEG", quality=85)
-            thumb_bytes = thumb_io.getvalue()
-            thumb_content_type = "image/jpeg"
-        except Exception as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid image file: {exc}",
-            )
-    elif file.content_type.startswith("video/"):
-        try:
-            with tempfile.NamedTemporaryFile(delete=True, suffix=".mp4") as temp_video:
-                temp_video.write(file_bytes)
-                temp_video.flush()
-                
-                cap = cv2.VideoCapture(temp_video.name)
-                ret, frame = cap.read()
-                cap.release()
-                
-                if ret:
-                    # Convert BGR to RGB
-                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    image = Image.fromarray(frame_rgb)
-                    image.thumbnail((400, 400))
-                    
-                    thumb_io = io.BytesIO()
-                    image.save(thumb_io, format="JPEG", quality=85)
-                    thumb_bytes = thumb_io.getvalue()
-                    thumb_content_type = "image/jpeg"
-        except Exception as exc:
-            print(f"Failed to generate video thumbnail: {exc}")
-            # We don't fail the upload if thumbnail generation fails for a video
-            pass
-
-    # Upload to MinIO
-    key = storage.build_key(current_user.id, file.filename or "upload")
+    key = storage.build_key(current_user.id, req.filename)
     thumb_key = key + ".thumb"
-    try:
-        storage.upload_file(file_bytes, key, file.content_type)
-        if thumb_bytes and thumb_content_type:
-            storage.upload_file(thumb_bytes, thumb_key, thumb_content_type)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Storage upload failed: {exc}",
-        )
 
+    url = storage.get_presigned_put_url(key, req.content_type)
+    thumb_url = storage.get_presigned_put_url(thumb_key, "image/jpeg")
+
+    return UploadResponse(key=key, url=url, thumbnail_url=thumb_url)
+
+
+@router.post("/confirm", response_model=PhotoRead, status_code=status.HTTP_201_CREATED)
+async def confirm_upload(
+    req: ConfirmRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> PhotoRead:
     # Persist metadata
     photo = await photo_crud.create_photo(
         db,
         user_id=current_user.id,
-        key=key,
-        filename=file.filename or "upload",
-        size=len(file_bytes),
-        mime_type=file.content_type,
+        key=req.key,
+        filename=req.filename,
+        size=req.size,
+        mime_type=req.content_type,
     )
 
     url = storage.get_presigned_url(photo.key)
-    thumb_url = storage.get_presigned_url(thumb_key)
+    thumb_url = storage.get_presigned_url(photo.key + ".thumb")
     return _to_read(photo, url, thumb_url)
 
 
