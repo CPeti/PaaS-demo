@@ -32,8 +32,11 @@ async function request<T>(
     if (!res.ok) {
         if (res.status === 401) {
             clearToken()
-            window.location.href = '/login'
-            throw new Error('Unauthorized: Redirecting to login.')
+            const path = window.location.pathname
+            if (path !== '/login' && path !== '/register') {
+                window.location.href = '/login'
+            }
+            throw new Error(typeof body?.detail === 'string' ? body.detail : 'Unauthorized')
         }
         const detail = body?.detail
         throw new Error(
@@ -151,7 +154,10 @@ export async function apiDeletePhoto(token: string, photoId: string): Promise<vo
     if (!res.ok) {
         if (res.status === 401) {
             clearToken()
-            window.location.href = '/login'
+            const path = window.location.pathname
+            if (path !== '/login' && path !== '/register') {
+                window.location.href = '/login'
+            }
         }
         const body = await res.json().catch(() => null)
         throw new Error(body?.detail ?? `HTTP ${res.status}`)

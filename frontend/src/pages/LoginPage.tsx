@@ -67,7 +67,7 @@ export function LoginPage() {
                                 autoComplete="username"
                                 value={username}
                                 onInput={(e) => setUsername((e.target as HTMLInputElement).value)}
-                                placeholder="your_username"
+                                placeholder="username"
                                 class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm text-white placeholder-slate-500 transition-colors focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
                             />
                         </div>
