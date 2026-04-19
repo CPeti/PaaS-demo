@@ -1,6 +1,6 @@
 terraform {
   cloud {
-    organization = "your-terraform-organization"
+    organization = "cpeti-org"
     workspaces {
       name = "paas-demo"
     }
