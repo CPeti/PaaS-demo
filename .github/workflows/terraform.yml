@@ -6,7 +6,6 @@ on:
 jobs:
   terraform:
     runs-on: ubuntu-latest
-    environment: production # Change this if you named your GitHub Environment differently!
     steps:
       - uses: actions/checkout@v3
       - uses: hashicorp/setup-terraform@v2
