@@ -1,4 +1,11 @@
 terraform {
+  cloud {
+    organization = "your-terraform-organization"
+    workspaces {
+      name = "paas-demo"
+    }
+  }
+
   required_providers {
     railway = {
       source  = "terraform-community-providers/railway"
@@ -43,7 +50,7 @@ resource "railway_variable" "postgres_user" {
 
 resource "railway_variable" "postgres_password" {
   name           = "POSTGRES_PASSWORD"
-  value          = "postgres"
+  value          = var.db_password
   environment_id = local.env_id
   service_id     = railway_service.db.id
 }
@@ -81,7 +88,7 @@ resource "railway_variable" "minio_root_user" {
 
 resource "railway_variable" "minio_root_password" {
   name           = "MINIO_ROOT_PASSWORD"
-  value          = "minioadmin"
+  value          = var.minio_password
   environment_id = local.env_id
   service_id     = railway_service.minio.id
 }
@@ -120,7 +127,7 @@ resource "railway_variable" "minio_job_user" {
 
 resource "railway_variable" "minio_job_pass" {
   name           = "MINIO_ROOT_PASSWORD"
-  value          = "minioadmin"
+  value          = var.minio_password
   environment_id = local.env_id
   service_id     = railway_service.minio_job.id
 }
@@ -150,7 +157,7 @@ resource "railway_service_domain" "backend_domain" {
 
 resource "railway_variable" "backend_db_url" {
   name           = "DATABASE_URL"
-  value          = "postgresql+asyncpg://postgres:postgres@db.railway.internal:5432/paas_demo"
+  value          = "postgresql+asyncpg://postgres:${var.db_password}@db.railway.internal:5432/paas_demo"
   environment_id = local.env_id
   service_id     = railway_service.backend.id
 }
@@ -178,7 +185,7 @@ resource "railway_variable" "backend_minio_ak" {
 
 resource "railway_variable" "backend_minio_sk" {
   name           = "MINIO_SECRET_KEY"
-  value          = "minioadmin"
+  value          = var.minio_password
   environment_id = local.env_id
   service_id     = railway_service.backend.id
 }
@@ -192,7 +199,7 @@ resource "railway_variable" "backend_minio_bucket" {
 
 resource "railway_variable" "backend_secret" {
   name           = "SECRET_KEY"
-  value          = "super-secret-production-key" # Hardcoded for demo
+  value          = var.backend_secret_key
   environment_id = local.env_id
   service_id     = railway_service.backend.id
 }
