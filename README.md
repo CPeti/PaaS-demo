@@ -25,13 +25,13 @@ A full-stack photo album application demonstrating a Platform-as-a-Service deplo
                                       └────────────┘
 ```
 
-| Layer | Technology |
-|---|---|
-| Frontend | Preact, TypeScript, Vite, Tailwind CSS v4 |
-| Backend | FastAPI, SQLAlchemy (async), Alembic, asyncpg |
-| Auth | OAuth2 password flow, JWT (HS256) |
-| Database | PostgreSQL 16 |
-| Container | Docker Compose (local dev) |
+| Layer     | Technology                                    |
+| --------- | --------------------------------------------- |
+| Frontend  | Preact, TypeScript, Vite, Tailwind CSS v4     |
+| Backend   | FastAPI, SQLAlchemy (async), Alembic, asyncpg |
+| Auth      | OAuth2 password flow, JWT (HS256)             |
+| Database  | PostgreSQL 16                                 |
+| Container | Docker Compose (local dev)                    |
 
 ---
 
@@ -48,6 +48,7 @@ A full-stack photo album application demonstrating a Platform-as-a-Service deplo
 ## Getting Started
 
 ### Prerequisites
+
 - Docker (with Compose v2)
 
 ### Docker - full stack
@@ -66,11 +67,11 @@ tilt up
 
 Press `Space` to open the Tilt dashboard in your browser.
 
-| Service | URL |
-|---|---|
-| Frontend | http://localhost:5173 |
-| Backend (FastAPI) | http://localhost:8000 |
-| API docs | http://localhost:8000/docs |
+| Service           | URL                        |
+| ----------------- | -------------------------- |
+| Frontend          | http://localhost:5173      |
+| Backend (FastAPI) | http://localhost:8000      |
+| API docs          | http://localhost:8000/docs |
 
 > The backend URL embedded in the frontend bundle defaults to `http://localhost:8000`.
 > Override it at build time: `docker compose build --build-arg VITE_API_URL=https://api.example.com frontend`
@@ -95,17 +96,17 @@ cd frontend && npm install && npm run dev
 
 ## API Endpoints
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| `GET` | `/` | - | Health check |
-| `POST` | `/auth/register` | - | Create account |
-| `POST` | `/auth/token` | - | Login → JWT |
-| `GET` | `/users/me` | Bearer | Current user profile |
-| `GET` | `/photos` | Bearer | List user's photos |
-| `POST` | `/photos/upload-url` | Bearer | Get S3 Presigned PUT URL |
-| `POST` | `/photos/confirm` | Bearer | Confirm direct S3 upload |
-| `PATCH` | `/photos/{id}` | Bearer | Update photo metadata (e.g. rename) |
-| `DELETE` | `/photos/{id}` | Bearer | Delete photo |
+| Method   | Path                 | Auth   | Description                         |
+| -------- | -------------------- | ------ | ----------------------------------- |
+| `GET`    | `/`                  | -      | Health check                        |
+| `POST`   | `/auth/register`     | -      | Create account                      |
+| `POST`   | `/auth/token`        | -      | Login → JWT                         |
+| `GET`    | `/users/me`          | Bearer | Current user profile                |
+| `GET`    | `/photos`            | Bearer | List user's photos                  |
+| `POST`   | `/photos/upload-url` | Bearer | Get S3 Presigned PUT URL            |
+| `POST`   | `/photos/confirm`    | Bearer | Confirm direct S3 upload            |
+| `PATCH`  | `/photos/{id}`       | Bearer | Update photo metadata (e.g. rename) |
+| `DELETE` | `/photos/{id}`       | Bearer | Delete photo                        |
 
 ---
 
@@ -132,7 +133,7 @@ PaaS-demo/
 ├── frontend/
 │   └── src/
 │   │   ├── lib/         # api.ts, auth.ts
-│   │   ├── pages/       # LandingPage, LoginPage, RegisterPage
+│   │   ├── pages/       # LandingPage, LoginPage, RegisterPage, etc
 │   │   └── app.tsx      # Router
 └── Tiltfile             # Tilt configuration for local Kubernetes dev
 ```
@@ -141,8 +142,8 @@ PaaS-demo/
 
 ## Environment Variables (`backend/.env`)
 
-| Variable | Default | Description |
-|---|---|---|
-| `DATABASE_URL` | `postgresql+asyncpg://...` | Async DB connection string |
-| `SECRET_KEY` | *(set a strong secret)* | JWT signing key |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Token lifetime |
+| Variable                      | Default                    | Description                |
+| ----------------------------- | -------------------------- | -------------------------- |
+| `DATABASE_URL`                | `postgresql+asyncpg://...` | Async DB connection string |
+| `SECRET_KEY`                  | _(set a strong secret)_    | JWT signing key            |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `30`                       | Token lifetime             |
