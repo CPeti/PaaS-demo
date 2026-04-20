@@ -2,7 +2,7 @@ terraform {
   cloud {
     organization = "cpeti-org"
     workspaces {
-      name = "paas-demo-v3"
+      name = "paas-demo"
     }
   }
 
@@ -21,14 +21,14 @@ provider "railway" {
 
 locals {
   project_id = "164ad9f1-929f-41e8-9883-4420ac94dc2b"
-  env_id     = "4979a725-fb99-4b3c-95ff-6f5dc642fe90"
+  env_id     = "3b933788-a2af-4ded-bb26-5fa7df7be6fa"
 }
 
 # --- DB Service ---
 resource "railway_service" "db" {
   name       = "db"
   project_id = local.project_id
-  
+
   source_image = "postgres:16-alpine"
 
   volume = {
@@ -37,32 +37,15 @@ resource "railway_service" "db" {
   }
 }
 
-resource "railway_variable" "postgres_user" {
-  name           = "POSTGRES_USER"
-  value          = "postgres"
+resource "railway_variable_collection" "db_vars" {
   environment_id = local.env_id
   service_id     = railway_service.db.id
-}
-
-resource "railway_variable" "postgres_password" {
-  name           = "POSTGRES_PASSWORD"
-  value          = var.db_password
-  environment_id = local.env_id
-  service_id     = railway_service.db.id
-}
-
-resource "railway_variable" "postgres_db" {
-  name           = "POSTGRES_DB"
-  value          = "postgres"
-  environment_id = local.env_id
-  service_id     = railway_service.db.id
-}
-
-resource "railway_variable" "postgres_pgdata" {
-  name           = "PGDATA"
-  value          = "/var/lib/postgresql/data/pgdata"
-  environment_id = local.env_id
-  service_id     = railway_service.db.id
+  variables = {
+    "POSTGRES_USER"     = "postgres"
+    "POSTGRES_PASSWORD" = var.db_password
+    "POSTGRES_DB"       = "postgres"
+    "PGDATA"            = "/var/lib/postgresql/data/pgdata"
+  }
 }
 
 # --- MinIO Service ---
@@ -75,64 +58,35 @@ resource "railway_service" "minio" {
   root_directory     = "/minio"
 }
 
-resource "railway_variable" "minio_root_user" {
-  name           = "MINIO_ROOT_USER"
-  value          = "minioadmin"
+resource "railway_variable_collection" "minio_vars" {
   environment_id = local.env_id
   service_id     = railway_service.minio.id
-}
-
-resource "railway_variable" "minio_root_password" {
-  name           = "MINIO_ROOT_PASSWORD"
-  value          = var.minio_password
-  environment_id = local.env_id
-  service_id     = railway_service.minio.id
-}
-
-# Add a port variable to expose the S3 API instead of the UI to other services if necessary
-resource "railway_variable" "minio_port" {
-  name           = "PORT"
-  value          = "9000"
-  environment_id = local.env_id
-  service_id     = railway_service.minio.id
+  variables = {
+    "MINIO_ROOT_USER"     = "minioadmin"
+    "MINIO_ROOT_PASSWORD" = var.minio_password
+    "PORT"                = "9000"
+  }
 }
 
 # --- MinIO Bucket Init Job ---
 resource "railway_service" "minio_job" {
-  name               = "minio-init"
-  project_id         = local.project_id
+  name       = "minio-init"
+  project_id = local.project_id
 
   source_repo        = "CPeti/PaaS-demo"
   source_repo_branch = "main"
   root_directory     = "/minio-init"
 }
 
-resource "railway_variable" "minio_job_endpoint" {
-  name           = "MINIO_ENDPOINT"
-  value          = "http://minio.railway.internal:9000"
+resource "railway_variable_collection" "minio_job_vars" {
   environment_id = local.env_id
   service_id     = railway_service.minio_job.id
-}
-
-resource "railway_variable" "minio_job_user" {
-  name           = "MINIO_ROOT_USER"
-  value          = "minioadmin"
-  environment_id = local.env_id
-  service_id     = railway_service.minio_job.id
-}
-
-resource "railway_variable" "minio_job_pass" {
-  name           = "MINIO_ROOT_PASSWORD"
-  value          = var.minio_password
-  environment_id = local.env_id
-  service_id     = railway_service.minio_job.id
-}
-
-resource "railway_variable" "minio_job_bucket" {
-  name           = "MINIO_BUCKET"
-  value          = "photos"
-  environment_id = local.env_id
-  service_id     = railway_service.minio_job.id
+  variables = {
+    "MINIO_ENDPOINT"      = "http://minio.railway.internal:9000"
+    "MINIO_ROOT_USER"     = "minioadmin"
+    "MINIO_ROOT_PASSWORD" = var.minio_password
+    "MINIO_BUCKET"        = "photos"
+  }
 }
 
 # --- Backend Service ---
@@ -151,67 +105,20 @@ resource "railway_service_domain" "backend_domain" {
   service_id     = railway_service.backend.id
 }
 
-resource "railway_variable" "backend_db_url" {
-  name           = "DATABASE_URL"
-  value          = "postgresql+asyncpg://postgres:${var.db_password}@db.railway.internal:5432/postgres"
+resource "railway_variable_collection" "backend_vars" {
   environment_id = local.env_id
   service_id     = railway_service.backend.id
-}
-
-resource "railway_variable" "backend_minio_endpoint" {
-  name           = "MINIO_ENDPOINT"
-  value          = "http://minio.railway.internal:9000"
-  environment_id = local.env_id
-  service_id     = railway_service.backend.id
-}
-
-resource "railway_variable" "backend_minio_public" {
-  name           = "MINIO_PUBLIC_ENDPOINT"
-  value          = "https://${railway_service_domain.minio_domain.domain}"
-  environment_id = local.env_id
-  service_id     = railway_service.backend.id
-}
-
-resource "railway_variable" "backend_minio_ak" {
-  name           = "MINIO_ACCESS_KEY"
-  value          = "minioadmin"
-  environment_id = local.env_id
-  service_id     = railway_service.backend.id
-}
-
-resource "railway_variable" "backend_minio_sk" {
-  name           = "MINIO_SECRET_KEY"
-  value          = var.minio_password
-  environment_id = local.env_id
-  service_id     = railway_service.backend.id
-}
-
-resource "railway_variable" "backend_minio_bucket" {
-  name           = "MINIO_BUCKET"
-  value          = "photos"
-  environment_id = local.env_id
-  service_id     = railway_service.backend.id
-}
-
-resource "railway_variable" "backend_secret" {
-  name           = "SECRET_KEY"
-  value          = var.backend_secret_key
-  environment_id = local.env_id
-  service_id     = railway_service.backend.id
-}
-
-resource "railway_variable" "backend_port" {
-  name           = "PORT"
-  value          = "8000"
-  environment_id = local.env_id
-  service_id     = railway_service.backend.id
-}
-
-resource "railway_variable" "backend_frontend_url" {
-  name           = "FRONTEND_URL"
-  value          = "https://${railway_service_domain.frontend_domain.domain}"
-  environment_id = local.env_id
-  service_id     = railway_service.backend.id
+  variables = {
+    "DATABASE_URL"          = "postgresql+asyncpg://postgres:${var.db_password}@db.railway.internal:5432/postgres"
+    "MINIO_ENDPOINT"        = "http://minio.railway.internal:9000"
+    "MINIO_PUBLIC_ENDPOINT" = "https://${railway_service_domain.minio_domain.domain}"
+    "MINIO_ACCESS_KEY"      = "minioadmin"
+    "MINIO_SECRET_KEY"      = var.minio_password
+    "MINIO_BUCKET"          = "photos"
+    "SECRET_KEY"            = var.backend_secret_key
+    "PORT"                  = "8000"
+    "FRONTEND_URL"          = "https://${railway_service_domain.frontend_domain.domain}"
+  }
 }
 
 # Domain for MINIO (so presigned URLs are reachable by the client browser)
@@ -237,16 +144,11 @@ resource "railway_service_domain" "frontend_domain" {
   service_id     = railway_service.frontend.id
 }
 
-resource "railway_variable" "frontend_api_url" {
-  name           = "VITE_API_URL"
-  value          = "https://${railway_service_domain.backend_domain.domain}"
+resource "railway_variable_collection" "frontend_vars" {
   environment_id = local.env_id
   service_id     = railway_service.frontend.id
-}
-
-resource "railway_variable" "frontend_port" {
-  name           = "PORT"
-  value          = "80"
-  environment_id = local.env_id
-  service_id     = railway_service.frontend.id
+  variables = {
+    "VITE_API_URL" = "https://${railway_service_domain.backend_domain.domain}"
+    "PORT"         = "80"
+  }
 }

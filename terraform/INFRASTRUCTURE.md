@@ -46,12 +46,13 @@ Configure these in **GitHub Settings -> Secrets -> Actions**:
 
 ---
 
-## Deployment Workflow
+## Deployment Workflow (Optimized)
 
 1.  **Code Change**: You push code to the `main` branch.
-2.  **CI Trigger**: GitHub Actions starts the `Terraform Apply` workflow in `.github/workflows/terraform.yml`.
-3.  **Cloud Sync**: GitHub connects to **HCP Terraform**. Terraform refreshes its state and calculates the diff.
-4.  **Railway Update**:
-    - Terraform updates the service configurations and environment variables.
-    - Railway's native CI/CD detects the push and starts the Docker builds for the `backend`, `frontend`, `minio`, and `minio-init` containers.
-5.  **Automatic Init**: The `minio-init` service runs once to create the `photos` bucket and set it to public, then goes to sleep.
+2.  **Deployment Paths**:
+    - **Infrastructure Changes**: If you modify files in the `terraform/` directory, GitHub Actions triggers the `Terraform Apply` workflow. This workflow uses a **parallelism limit of 1** to avoid API rate limiting.
+    - **Application Changes**: If you only modify code in `/backend` or `/frontend`, the Terraform workflow is **skipped**. 
+3.  **Cloud Sync & Update**:
+    - When the Terraform workflow runs, it uses `railway_variable_collection` to update all variables for a service in a single API call, further preventing rate limits.
+    - Railway's native CI/CD always detects pushes and starts the Docker builds for the corresponding services.
+4.  **Automatic Init**: The `minio-init` service runs to ensure infrastructure readiness (e.g., bucket creation).
