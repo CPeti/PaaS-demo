@@ -2,7 +2,7 @@ terraform {
   cloud {
     organization = "cpeti-org"
     workspaces {
-      name = "paas-demo-v2"
+      name = "paas-demo-v3"
     }
   }
 
@@ -20,8 +20,8 @@ provider "railway" {
 }
 
 locals {
-  project_id = "097c03e8-823d-4dbf-8063-b7a09d4bd607"
-  env_id     = "994742c8-9d89-4284-844d-a4eb4e2f82b1"
+  project_id = "164ad9f1-929f-41e8-9883-4420ac94dc2b"
+  env_id     = "4979a725-fb99-4b3c-95ff-6f5dc642fe90"
 }
 
 # --- DB Service ---
