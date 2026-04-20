@@ -2,7 +2,7 @@ terraform {
   cloud {
     organization = "cpeti-org"
     workspaces {
-      name = "paas-demo"
+      name = "paas-demo-v2"
     }
   }
 
@@ -53,7 +53,7 @@ resource "railway_variable" "postgres_password" {
 
 resource "railway_variable" "postgres_db" {
   name           = "POSTGRES_DB"
-  value          = "paas_demo"
+  value          = "postgres"
   environment_id = local.env_id
   service_id     = railway_service.db.id
 }
@@ -153,7 +153,7 @@ resource "railway_service_domain" "backend_domain" {
 
 resource "railway_variable" "backend_db_url" {
   name           = "DATABASE_URL"
-  value          = "postgresql+asyncpg://postgres:${var.db_password}@db.railway.internal:5432/paas_demo"
+  value          = "postgresql+asyncpg://postgres:${var.db_password}@db.railway.internal:5432/postgres"
   environment_id = local.env_id
   service_id     = railway_service.backend.id
 }
