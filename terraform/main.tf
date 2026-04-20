@@ -131,10 +131,12 @@ resource "railway_service" "backend" {
   source_repo_branch = "main"
   root_directory     = "/backend"
 
-  regions {
-    region       = "europe-west4"
-    num_replicas = 2
-  }
+  regions = [
+    {
+      region       = "europe-west4"
+      num_replicas = 2
+    }
+  ]
 }
 
 resource "railway_service_domain" "backend_domain" {
