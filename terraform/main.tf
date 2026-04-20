@@ -19,19 +19,15 @@ provider "railway" {
   # Set it before running terraform apply.
 }
 
-resource "railway_project" "paas_demo" {
-  name        = "paas-demo"
-  description = "Managed via Terraform"
-}
-
 locals {
-  env_id = railway_project.paas_demo.default_environment.id
+  project_id = "097c03e8-823d-4dbf-8063-b7a09d4bd607"
+  env_id     = "994742c8-9d89-4284-844d-a4eb4e2f82b1"
 }
 
 # --- DB Service ---
 resource "railway_service" "db" {
   name       = "db"
-  project_id = railway_project.paas_demo.id
+  project_id = local.project_id
   
   source_image = "postgres:16-alpine"
 
@@ -72,7 +68,7 @@ resource "railway_variable" "postgres_pgdata" {
 # --- MinIO Service ---
 resource "railway_service" "minio" {
   name       = "minio"
-  project_id = railway_project.paas_demo.id
+  project_id = local.project_id
 
   source_repo        = "CPeti/PaaS-demo"
   source_repo_branch = "main"
@@ -142,7 +138,7 @@ resource "railway_variable" "minio_job_bucket" {
 # --- Backend Service ---
 resource "railway_service" "backend" {
   name       = "backend"
-  project_id = railway_project.paas_demo.id
+  project_id = local.project_id
 
   source_repo        = "CPeti/PaaS-demo"
   source_repo_branch = "main"
@@ -228,7 +224,7 @@ resource "railway_service_domain" "minio_domain" {
 # --- Frontend Service ---
 resource "railway_service" "frontend" {
   name       = "frontend"
-  project_id = railway_project.paas_demo.id
+  project_id = local.project_id
 
   source_repo        = "CPeti/PaaS-demo"
   source_repo_branch = "main"
