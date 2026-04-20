@@ -2,6 +2,7 @@ import uuid
 
 import boto3
 from botocore.config import Config
+from botocore.exceptions import ClientError
 
 from app.core.config import settings
 
@@ -13,7 +14,8 @@ def _make_client(endpoint_url: str):
         endpoint_url=endpoint_url,
         aws_access_key_id=settings.MINIO_ACCESS_KEY,
         aws_secret_access_key=settings.MINIO_SECRET_KEY,
-        config=Config(signature_version="s3v4"),
+        # Keep path-style URLs so custom domains work as /bucket/key.
+        config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
         region_name="us-east-1",  # required by boto3 even for MinIO
     )
 
@@ -30,6 +32,22 @@ def _presign_client():
     to the public endpoint from inside the container.
     """
     return _make_client(settings.minio_public_endpoint)
+
+
+def ensure_bucket_exists() -> None:
+    """Create the configured bucket when missing.
+
+    This makes uploads resilient if the init job has not run yet.
+    """
+    client = _ops_client()
+    try:
+        client.head_bucket(Bucket=settings.MINIO_BUCKET)
+    except ClientError as exc:
+        code = exc.response.get("Error", {}).get("Code")
+        if code in {"404", "NoSuchBucket", "NotFound"}:
+            client.create_bucket(Bucket=settings.MINIO_BUCKET)
+            return
+        raise
 
 
 def build_key(user_id: uuid.UUID, filename: str) -> str:

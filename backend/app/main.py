@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.core.storage import ensure_bucket_exists
 from app.db.base import Base
 from app.db.session import engine
 from app.routers import auth, users, photos
@@ -15,6 +16,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Create tables on startup (use Alembic in production instead)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    ensure_bucket_exists()
     yield
 
 
