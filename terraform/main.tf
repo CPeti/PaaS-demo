@@ -100,7 +100,7 @@ resource "railway_variable" "minio_port" {
 # --- MinIO Bucket Init Job ---
 resource "railway_service" "minio_job" {
   name               = "minio-init"
-  project_id         = railway_project.paas_demo.id
+  project_id         = local.project_id
 
   source_repo        = "CPeti/PaaS-demo"
   source_repo_branch = "main"
