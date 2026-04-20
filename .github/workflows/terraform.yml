@@ -17,9 +17,5 @@ jobs:
         working-directory: ./terraform
 
       - name: Terraform Apply
-        uses: nick-fields/retry@v2
-        with:
-          timeout_minutes: 15
-          max_attempts: 5
-          retry_wait_seconds: 60
-          command: cd terraform && terraform apply -auto-approve
+        run: terraform apply -auto-approve
+        working-directory: ./terraform
