@@ -133,7 +133,7 @@ resource "railway_service" "backend" {
 
   regions = [
     {
-      region       = "europe-west4"
+      region       = "europe-west4-drams3a"
       num_replicas = 2
     }
   ]
