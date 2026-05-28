@@ -30,12 +30,12 @@ Sensitive data is never stored in code. It is distributed across two layers:
 
 Manage these in your Workspace under the **Variables** tab:
 
-1.  **Terraform Variables** (Top section - _Do **NOT** check the HCL box_):
+1.  **Terraform Variables**:
     - `db_password`: Generic password for Postgres.
     - `minio_password`: Root password for MinIO.
     - `backend_secret_key`: Secret for JWT token signing.
 
-2.  **Environment Variables** (Bottom section):
+2.  **Environment Variables**:
     - `RAILWAY_TOKEN`: Your Personal Access Token.
 
 #### **Layer B: GitHub (Action Secrets)**
